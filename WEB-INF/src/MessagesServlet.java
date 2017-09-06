@@ -37,16 +37,24 @@ public class MessagesServlet extends HttpServlet {
                     if (resultSet.first()) {
                         date = resultSet.getString(5);
                         for (; !resultSet.isAfterLast(); resultSet.next()) {
+                            String text = resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _");
+                            String key = Encryption.createKey(text);
+                            text = Encryption.encrypt(text, key);
+                            key = Encryption.encryptKey(key);
+
                             out.append(resultSet.getString(1))
-                                    .append("_;_")
-                                    .append(resultSet.getString(2))
-                                    .append("_;_")
+                                    .append("_ ; _")
+                                    .append(text)
+                                    .append("_ ; _")
+                                    .append(key)
+                                    .append("_ ; _")
                                     .append(resultSet.getString(5))
-                                    .append("_;_")
+                                    .append("_ ; _")
                                     .append(resultSet.getString(3))
-                                    .append("_;_")
+                                    .append("_ ; _")
                                     .append(resultSet.getString(4))
-                                    .append("_nextMessage_");
+                                    .append("_ next _")
+                                    .append("\n");
                         }
                         out.flush();
                     }
