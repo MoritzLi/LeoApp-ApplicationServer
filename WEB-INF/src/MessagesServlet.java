@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Properties;
 
 @WebServlet("/getMessages")
-public class Test0 extends HttpServlet {
+public class MessagesServlet extends HttpServlet {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         response.setContentType("text/plain");
