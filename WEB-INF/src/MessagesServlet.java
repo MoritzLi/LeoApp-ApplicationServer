@@ -120,16 +120,12 @@ public class MessagesServlet extends HttpServlet {
                 statement3.close();
 
                 Statement statement4 = connection.createStatement();
-                if (statement4.execute("SELECT a2.cid, a2.uid FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + uid)) {
+                if (statement4.execute("SELECT COUNT(*) FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + uid)) {
                     ResultSet resultSet = statement4.getResultSet();
-                    int count = 0;
-                    for (resultSet.first(); !resultSet.isAfterLast(); resultSet.next()) {
-                        count++;
-                    }
-                    if (count != acount) {
+                    if (resultSet.first() && resultSet.getInt(1) != acount) {
                         out.append("a_ next _\n")
                                 .flush();
-                        acount = count;
+                        acount = resultSet.getInt(1);
                     }
                     resultSet.close();
                 }
