@@ -18,9 +18,13 @@ public class MessagesServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
 
         Map<String, String[]> params = request.getParameterMap();
-        int uid = Integer.parseInt(params.get("uid")[0]);
+        if (!params.containsKey("uid"))
+            return;
+        String uid = params.get("uid")[0];
         System.out.println(uid);
-        out.flush();
+
+        List<String> sent = new List<>();
+        int acount = 0;
 
         try {
             boolean running = true;
@@ -31,9 +35,9 @@ public class MessagesServlet extends HttpServlet {
             Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/d02566f2", properties);
             String date = "0";
             while (running) {
-                Statement statement = connection.createStatement();
-                if (statement.execute("SELECT mid, mtext, m.cid, m.uid, UNIX_TIMESTAMP(mdate) as mdate FROM Messages m INNER JOIN Assoziation a ON a.cid = m.cid WHERE a.uid = " + uid + " AND UNIX_TIMESTAMP(mdate) > " + date + " ORDER BY mdate DESC")) {
-                    ResultSet resultSet = statement.getResultSet();
+                Statement statement1 = connection.createStatement();
+                if (statement1.execute("SELECT mid, mtext, m.cid, m.uid, UNIX_TIMESTAMP(mdate) as mdate FROM Messages m INNER JOIN Assoziation a ON a.cid = m.cid WHERE a.uid = " + uid + " AND UNIX_TIMESTAMP(mdate) > " + date + " ORDER BY mdate DESC")) {
+                    ResultSet resultSet = statement1.getResultSet();
                     if (resultSet.first()) {
                         date = resultSet.getString(5);
                         for (; !resultSet.isAfterLast(); resultSet.next()) {
@@ -42,7 +46,8 @@ public class MessagesServlet extends HttpServlet {
                             text = Encryption.encrypt(text, key);
                             key = Encryption.encryptKey(key);
 
-                            out.append(resultSet.getString(1))
+                            out.append('m')
+                                    .append(resultSet.getString(1))
                                     .append("_ ; _")
                                     .append(text)
                                     .append("_ ; _")
@@ -60,7 +65,75 @@ public class MessagesServlet extends HttpServlet {
                     }
                     resultSet.close();
                 }
-                statement.close();
+                statement1.close();
+
+                Statement statement2 = connection.createStatement();
+                if (statement2.execute("SELECT c.cid, c.cname, c.ctype FROM Chats c INNER JOIN Assoziation a ON c.cid = a.cid AND a.uid = " + uid)) {
+                    ResultSet resultSet = statement2.getResultSet();
+                    if (resultSet.first()) {
+                        for (; !resultSet.isAfterLast(); resultSet.next()) {
+                            String s = "c" +
+                                    resultSet.getString(1) +
+                                    "_ ; _" +
+                                    resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _") +
+                                    "_ ; _" +
+                                    resultSet.getString(3) +
+                                    "_ next _" +
+                                    "\n";
+                            if (!sent.contains(s)) {
+                                out.append(s)
+                                        .flush();
+                                sent.append(s);
+                            }
+                        }
+                    }
+                    resultSet.close();
+                }
+                statement2.close();
+
+                Statement statement3 = connection.createStatement();
+                if (statement3.execute("SELECT uid, uname, uklasse, upermission, udefaultname FROM Users")) {
+                    ResultSet resultSet = statement3.getResultSet();
+                    if (resultSet.first()) {
+                        for (; !resultSet.isAfterLast(); resultSet.next()) {
+                            String s = "u" +
+                                    resultSet.getString(1) +
+                                    "_ ; _" +
+                                    resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _") +
+                                    "_ ; _" +
+                                    resultSet.getString(3) +
+                                    "_ ; _" +
+                                    resultSet.getString(4) +
+                                    "_ ; _" +
+                                    resultSet.getString(5) +
+                                    "_ next _" +
+                                    "\n";
+                            if (!sent.contains(s)) {
+                                out.append(s)
+                                        .flush();
+                                sent.append(s);
+                            }
+                        }
+                    }
+                    resultSet.close();
+                }
+                statement3.close();
+
+                Statement statement4 = connection.createStatement();
+                if (statement4.execute("SELECT a2.cid, a2.uid FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + uid)) {
+                    ResultSet resultSet = statement4.getResultSet();
+                    int count = 0;
+                    for (resultSet.first(); !resultSet.isAfterLast(); resultSet.next()) {
+                        count++;
+                    }
+                    if (count != acount) {
+                        out.append("a_ next _\n")
+                                .flush();
+                        acount = count;
+                    }
+                    resultSet.close();
+                }
+                statement4.close();
             }
             connection.close();
         } catch (SQLException e) {

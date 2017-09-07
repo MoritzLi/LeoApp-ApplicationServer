@@ -1,8 +1,4 @@
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-
-public abstract class Encryption {
+abstract class Encryption {
     private static final String key2 = "ABCD";
 
     static String encrypt(String text, String key) {
@@ -31,51 +27,6 @@ public abstract class Encryption {
                     builder.append(textChar);
                 }
             }
-        }
-        return builder.toString();
-    }
-
-    public static String decrypt(String text, String key) throws UnsupportedEncodingException {
-        StringBuilder builder = new StringBuilder();
-        assert key.matches("[A-Z]*");
-        text = URLEncoder.encode(text, "UTF-8");
-        for (int i = 0, skipped = 0; i < text.length(); i++) {
-            char textChar = text.charAt(i),
-                    keyChar = key.charAt(i - skipped),
-                    decrypted = (char) (textChar - (keyChar - 65));
-            if (textChar == '%') {
-                for (int j = 0; j <= 2; j++) {
-                    builder.append(text.charAt(i + j));
-                }
-                i += 2;
-                skipped += 2;
-            } else {
-                if (isCapitalLetter(textChar)) {
-                    if (decrypted < 65)
-                        decrypted += 26;
-                    builder.append(decrypted);
-                } else if (isLowerCaseLetter(textChar)) {
-                    if (decrypted < 97)
-                        decrypted += 26;
-                    builder.append(decrypted);
-                } else {
-                    builder.append(textChar);
-                }
-            }
-        }
-        return URLDecoder.decode(builder.toString(), "UTF-8");
-    }
-
-    public static String decryptKey(String key) {
-        StringBuilder builder = new StringBuilder();
-        assert key2.matches("[A-Z]*");
-        for (int i = 0; i < key.length(); i++) {
-            char keyChar = key.charAt(i),
-                    key2Char = key2.charAt(i % key2.length()),
-                    decrypted = (char) (keyChar - (key2Char - 65));
-            if (decrypted < 65)
-                decrypted += 26;
-            builder.append(decrypted);
         }
         return builder.toString();
     }
