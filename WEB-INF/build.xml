@@ -8,7 +8,7 @@
     </path>
 
     <target name="compile">
-        <javac destdir="classes" debug="true" srcdir="src">
+        <javac destdir="classes" debug="true" srcdir="src" includeantruntime="false">
             <classpath refid="compile.classpath"/>
         </javac>
     </target>
