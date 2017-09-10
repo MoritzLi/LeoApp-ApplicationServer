@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<project name="AntExample1" default="war">
+
+    <path id="compile.classpath">
+        <fileset dir="../../../lib">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <target name="compile">
+        <javac destdir="classes" debug="true" srcdir="src">
+            <classpath refid="compile.classpath"/>
+        </javac>
+    </target>
+
+    <target name="war" depends="compile">
+        <war destfile="leoapp.war" webxml="web.xml">
+            <lib dir="../../../lib"/>
+            <classes dir="classes"/>
+        </war>
+    </target>
+
+</project>

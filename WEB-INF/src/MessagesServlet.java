@@ -9,7 +9,7 @@ import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
 
-@WebServlet("/getMessages")
+@WebServlet("")
 public class MessagesServlet extends HttpServlet {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
