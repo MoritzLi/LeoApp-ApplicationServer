@@ -14,7 +14,7 @@
     </target>
 
     <target name="war" depends="compile">
-        <war destfile="leoapp.war" webxml="web.xml">
+        <war destfile="../../leoapp.war" webxml="web.xml">
             <lib dir="../../../lib"/>
             <classes dir="classes"/>
         </war>

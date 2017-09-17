@@ -26,11 +26,14 @@ public class MessagesServlet extends HttpServlet {
 
         try {
             boolean running = true;
+
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+
             Properties properties = new Properties();
             properties.setProperty("user", "Moritz");
             properties.setProperty("password", "tracy310");
-            properties.setProperty("useSSL", "false");
             Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/d02566f2", properties);
+
             String date = "0";
             while (running) {
                 Statement statement1 = connection.createStatement();
@@ -130,8 +133,10 @@ public class MessagesServlet extends HttpServlet {
                 statement4.close();
             }
             connection.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException | IllegalAccessException | InstantiationException | ClassNotFoundException e) {
+            out.append('-');
+            e.printStackTrace(out);
+            out.append("_ next _");
         }
 
         out.close();
