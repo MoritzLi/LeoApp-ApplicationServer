@@ -16,26 +16,28 @@ public class MessagesServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
 
         Map<String, String[]> params = request.getParameterMap();
-        if (!params.containsKey("uid"))
+        if (!params.containsKey("uid")) {
+            out.write("-missing userid");
+            out.close();
             return;
+        }
         String uid = params.get("uid")[0];
-        System.out.println(uid);
-
+        String date = "0";
+        if (params.containsKey("mdate")) {
+            date = params.get("mdate")[0];
+        }
         List<String> sent = new List<>();
         int acount = 0;
 
         try {
-            boolean running = true;
-
             Class.forName("com.mysql.jdbc.Driver").newInstance();
 
             Properties properties = new Properties();
-            properties.setProperty("user", "Moritz");
-            properties.setProperty("password", "tracy310");
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/d02566f2", properties);
+            properties.setProperty("user", "leo");
+            properties.setProperty("password", "!LeO!2013");
+            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/leoapp", properties);
 
-            String date = "0";
-            while (running) {
+            while (!connection.isClosed()) {
                 Statement statement1 = connection.createStatement();
                 if (statement1.execute("SELECT mid, mtext, m.cid, m.uid, UNIX_TIMESTAMP(mdate) as mdate FROM Messages m INNER JOIN Assoziation a ON a.cid = m.cid WHERE a.uid = " + uid + " AND UNIX_TIMESTAMP(mdate) > " + date + " ORDER BY mdate DESC")) {
                     ResultSet resultSet = statement1.getResultSet();
