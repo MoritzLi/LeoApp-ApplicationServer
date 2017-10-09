@@ -1,3 +1,5 @@
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -25,54 +27,66 @@ public class MessagesServlet extends HttpServlet {
         String date = "0";
         if (params.containsKey("mdate")) {
             date = params.get("mdate")[0];
+        } else {
+            out.write("-add mdate parameter to increase performance_ next _\n");
         }
         List<String> sent = new List<>();
+        int mcount = 0;
+        int ccount = 0;
+        int ucount = 0;
         int acount = 0;
 
         try {
-            Class.forName("com.mysql.jdbc.Driver").newInstance();
+            Connection connection = (Connection) getServletContext().getAttribute("DBConnection");
 
-            Properties properties = new Properties();
-            properties.setProperty("user", "leo");
-            properties.setProperty("password", "!LeO!2013");
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/leoapp", properties);
+            while (true) {
+                Statement statementMessagesCount = connection.createStatement();
+                if (statementMessagesCount.execute("SELECT COUNT(*) FROM Messages m INNER JOIN Assoziation a ON a.cid = m.cid WHERE a.uid = " + uid + " AND UNIX_TIMESTAMP(mdate) > " + date)) {
+                    ResultSet resultSetCount = statementMessagesCount.getResultSet();
+                    if (resultSetCount.first() && mcount != resultSetCount.getInt(0)) {
+                        mcount = resultSetCount.getInt(0);
 
-            while (!connection.isClosed()) {
-                Statement statement1 = connection.createStatement();
-                if (statement1.execute("SELECT mid, mtext, m.cid, m.uid, UNIX_TIMESTAMP(mdate) as mdate FROM Messages m INNER JOIN Assoziation a ON a.cid = m.cid WHERE a.uid = " + uid + " AND UNIX_TIMESTAMP(mdate) > " + date + " ORDER BY mdate DESC")) {
-                    ResultSet resultSet = statement1.getResultSet();
-                    if (resultSet.first()) {
-                        date = resultSet.getString(5);
-                        for (; !resultSet.isAfterLast(); resultSet.next()) {
-                            String text = resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _");
-                            String key = Encryption.createKey(text);
-                            text = Encryption.encrypt(text, key);
-                            key = Encryption.encryptKey(key);
+                        Statement statementMessages = connection.createStatement();
+                        if (statementMessages.execute("SELECT mid, mtext, m.cid, m.uid, UNIX_TIMESTAMP(mdate) as mdate FROM Messages m INNER JOIN Assoziation a ON a.cid = m.cid WHERE a.uid = " + uid + " AND UNIX_TIMESTAMP(mdate) > " + date + " ORDER BY mdate DESC")) {
+                            ResultSet resultSet = statementMessages.getResultSet();
+                            if (resultSet.first()) {
+                                date = resultSet.getString(5);
+                                for (; !resultSet.isAfterLast(); resultSet.next()) {
+                                    String text = resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _");
+                                    String key = Encryption.createKey(text);
+                                    text = Encryption.encrypt(text, key);
+                                    key = Encryption.encryptKey(key);
 
-                            out.append('m')
-                                    .append(resultSet.getString(1))
-                                    .append("_ ; _")
-                                    .append(text)
-                                    .append("_ ; _")
-                                    .append(key)
-                                    .append("_ ; _")
-                                    .append(resultSet.getString(5))
-                                    .append("_ ; _")
-                                    .append(resultSet.getString(3))
-                                    .append("_ ; _")
-                                    .append(resultSet.getString(4))
-                                    .append("_ next _")
-                                    .append("\n");
+                                    out.append('m')
+                                            .append(resultSet.getString(1))
+                                            .append("_ ; _")
+                                            .append(text)
+                                            .append("_ ; _")
+                                            .append(key)
+                                            .append("_ ; _")
+                                            .append(resultSet.getString(5))
+                                            .append("_ ; _")
+                                            .append(resultSet.getString(3))
+                                            .append("_ ; _")
+                                            .append(resultSet.getString(4))
+                                            .append("_ next _")
+                                            .append("\n");
+                                }
+                                out.flush();
+                            }
+                            resultSet.close();
                         }
-                        out.flush();
-                    }
-                    resultSet.close();
-                }
-                statement1.close();
+                        statementMessages.close();
 
-                Statement statement2 = connection.createStatement();
-                if (statement2.execute("SELECT c.cid, c.cname, c.ctype FROM Chats c INNER JOIN Assoziation a ON c.cid = a.cid AND a.uid = " + uid)) {
-                    ResultSet resultSet = statement2.getResultSet();
+                    }
+                    resultSetCount.close();
+                }
+                statementMessagesCount.close();
+
+
+                Statement statementChats = connection.createStatement();
+                if (statementChats.execute("SELECT c.cid, c.cname, c.ctype FROM Chats c INNER JOIN Assoziation a ON c.cid = a.cid AND a.uid = " + uid)) {
+                    ResultSet resultSet = statementChats.getResultSet();
                     if (resultSet.first()) {
                         for (; !resultSet.isAfterLast(); resultSet.next()) {
                             String s = "c" +
@@ -92,11 +106,11 @@ public class MessagesServlet extends HttpServlet {
                     }
                     resultSet.close();
                 }
-                statement2.close();
+                statementChats.close();
 
-                Statement statement3 = connection.createStatement();
-                if (statement3.execute("SELECT uid, uname, uklasse, upermission, udefaultname FROM Users")) {
-                    ResultSet resultSet = statement3.getResultSet();
+                Statement statementUser = connection.createStatement();
+                if (statementUser.execute("SELECT uid, uname, uklasse, upermission, udefaultname FROM Users")) {
+                    ResultSet resultSet = statementUser.getResultSet();
                     if (resultSet.first()) {
                         for (; !resultSet.isAfterLast(); resultSet.next()) {
                             String s = "u" +
@@ -120,11 +134,11 @@ public class MessagesServlet extends HttpServlet {
                     }
                     resultSet.close();
                 }
-                statement3.close();
+                statementUser.close();
 
-                Statement statement4 = connection.createStatement();
-                if (statement4.execute("SELECT COUNT(*) FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + uid)) {
-                    ResultSet resultSet = statement4.getResultSet();
+                Statement statementAssoziationCount = connection.createStatement();
+                if (statementAssoziationCount.execute("SELECT COUNT(*) FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + uid)) {
+                    ResultSet resultSet = statementAssoziationCount.getResultSet();
                     if (resultSet.first() && resultSet.getInt(1) != acount) {
                         out.append("a_ next _\n")
                                 .flush();
@@ -132,10 +146,9 @@ public class MessagesServlet extends HttpServlet {
                     }
                     resultSet.close();
                 }
-                statement4.close();
+                statementAssoziationCount.close();
             }
-            connection.close();
-        } catch (SQLException | IllegalAccessException | InstantiationException | ClassNotFoundException e) {
+        } catch (SQLException | ClassCastException e) {
             out.append('-');
             e.printStackTrace(out);
             out.append("_ next _");
