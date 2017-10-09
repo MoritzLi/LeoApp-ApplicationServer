@@ -5,21 +5,17 @@ import javax.servlet.annotation.WebListener;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
 
 @WebListener
 public class AppContextListener implements ServletContextListener {
-
+    @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
         try {
             ServletContext servletContext = servletContextEvent.getServletContext();
 
             Class.forName("com.mysql.jdbc.Driver").newInstance();
 
-            Properties properties = new Properties();
-            properties.setProperty("user", "Moritz");
-            properties.setProperty("password", "tracy310");
-            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/d02566f2", properties);
+            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/leoapp", "leo", "!LeO!2013");
 
             servletContext.setAttribute("DBConnection", connection);
 
@@ -29,6 +25,7 @@ public class AppContextListener implements ServletContextListener {
         }
     }
 
+    @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         try {
             ServletContext servletContext = servletContextEvent.getServletContext();
@@ -41,5 +38,4 @@ public class AppContextListener implements ServletContextListener {
             e.printStackTrace();
         }
     }
-
 }

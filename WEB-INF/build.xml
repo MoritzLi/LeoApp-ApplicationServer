@@ -1,8 +1,8 @@
-<?xml version="1.0" ?>
-<project name="AntExample1" default="war">
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="LeoAppTomcat" default="war">
 
     <path id="compile.classpath">
-        <fileset dir="../../lib">
+        <fileset dir="../../../lib">
             <include name="*.jar"/>
         </fileset>
     </path>
