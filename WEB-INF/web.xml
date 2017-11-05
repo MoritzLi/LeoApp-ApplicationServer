@@ -7,18 +7,4 @@
         version="3.1"
         metadata-complete="true">
 
-    <servlet>
-        <servlet-name>messenger</servlet-name>
-        <servlet-class>MessagesServlet</servlet-class>
-    </servlet>
-
-    <servlet-mapping>
-        <servlet-name>messenger</servlet-name>
-        <url-pattern>/</url-pattern>
-    </servlet-mapping>
-
-    <listener>
-        <listener-class>AppContextListener</listener-class>
-    </listener>
-
 </web-app>
