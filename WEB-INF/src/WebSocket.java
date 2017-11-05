@@ -17,6 +17,11 @@ public class WebSocket {
 
     @OnClose
     public void onClose(Session session) {
+        try {
+            client.getConnection().close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         System.out.println("Close Connection ...");
     }
 
@@ -32,20 +37,15 @@ public class WebSocket {
             return "mdate set to: " + client.getMdate();
         }
         if (message.startsWith("request") && client.getMdate() != null && client.getUid() != 0) {
-            StringBuilder builder = new StringBuilder();
-
             try {
                 Class.forName("com.mysql.jdbc.Driver").newInstance();
-
-                if (client.getConnection() == null) {
-                    client.setConnection(DriverManager.getConnection("jdbc:mysql://localhost:3306/leoapp", "leo", "!LeO!2013"));
-                }
+                client.setConnection(DriverManager.getConnection("jdbc:mysql://localhost:3306/leoapp", "leo", "!LeO!2013"));
 
                 new ReceiveThread().start();
 
                 return "+ok";
             } catch (IllegalAccessException | InstantiationException | SQLException | ClassNotFoundException e) {
-                e.printStackTrace();
+                return '-' + e.getMessage();
             }
         }
         return "not part of the protocol";
