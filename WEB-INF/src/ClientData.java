@@ -64,7 +64,9 @@ class ClientData {
         return sent;
     }
 
-    Connection getConnection() {
+    Connection getConnection() throws Exception {
+        if (connection.isClosed())
+            throw new Exception("conntection closed!");
         return connection;
     }
 

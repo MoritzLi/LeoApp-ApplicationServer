@@ -11,7 +11,6 @@ public class WebSocket {
 
     @OnOpen
     public void onOpen(Session session) {
-        System.out.println("Open Connection ...");
         client = new ClientData(session);
     }
 
@@ -19,15 +18,13 @@ public class WebSocket {
     public void onClose(Session session) {
         try {
             client.getConnection().close();
-        } catch (SQLException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.println("Close Connection ...");
     }
 
     @OnMessage
     public String onMessage(String message, Session session) {
-        System.out.println("Message from the client: " + message);
         if (message.startsWith("uid")) {
             client.setUid(Integer.parseInt(message.substring(message.indexOf('=') + 1)));
             return "uid set to: " + client.getUid();
@@ -54,6 +51,11 @@ public class WebSocket {
     @OnError
     public void onError(Throwable e) {
         e.printStackTrace();
+        try {
+            client.getConnection().close();
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
     }
 
     private class ReceiveThread extends Thread {
@@ -178,11 +180,12 @@ public class WebSocket {
                     }
                     statementAssoziationCount.close();
                 }
-            } catch (SQLException | InterruptedException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
+            } finally {
                 try {
                     client.getConnection().close();
-                } catch (SQLException e1) {
+                } catch (Exception e1) {
                     e1.printStackTrace();
                 }
             }
