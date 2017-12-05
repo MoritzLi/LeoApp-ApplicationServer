@@ -1,9 +1,6 @@
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 @ServerEndpoint("/")
 public class WebSocket {
@@ -12,14 +9,18 @@ public class WebSocket {
     @OnOpen
     public void onOpen(Session session) {
         client = new ClientData(session);
+        System.out.println("new connection: " + session.toString());
     }
 
     @OnClose
     public void onClose(Session session) {
         try {
-            client.getConnection().close();
-        } catch (Exception e) {
+            Connection c = client.getConnection();
+            c.close();
+        } catch (SQLException e) {
             e.printStackTrace();
+        } catch (Exception ignored) {
+
         }
     }
 
@@ -27,11 +28,11 @@ public class WebSocket {
     public String onMessage(String message, Session session) {
         if (message.startsWith("uid")) {
             client.setUid(Integer.parseInt(message.substring(message.indexOf('=') + 1)));
-            return "uid set to: " + client.getUid();
+            return "+OK";
         }
         if (message.startsWith("mdate")) {
             client.setMdate(message.substring(message.indexOf('=') + 1));
-            return "mdate set to: " + client.getMdate();
+            return "+OK";
         }
         if (message.startsWith("request") && client.getMdate() != null && client.getUid() != 0) {
             try {
@@ -40,7 +41,7 @@ public class WebSocket {
 
                 new ReceiveThread().start();
 
-                return "+ok";
+                return "+OK";
             } catch (IllegalAccessException | InstantiationException | SQLException | ClassNotFoundException e) {
                 return '-' + e.getMessage();
             }
@@ -53,8 +54,8 @@ public class WebSocket {
         e.printStackTrace();
         try {
             client.getConnection().close();
-        } catch (Exception e1) {
-            e1.printStackTrace();
+        } catch (Exception ignored) {
+
         }
     }
 
@@ -62,7 +63,7 @@ public class WebSocket {
         @Override
         public void run() {
             try {
-                sleep(1500);
+                sleep(1000);
 
                 while (client.getSession().isOpen()) {
                     Statement statementMessages = client.getConnection().createStatement();
@@ -185,8 +186,8 @@ public class WebSocket {
             } finally {
                 try {
                     client.getConnection().close();
-                } catch (Exception e1) {
-                    e1.printStackTrace();
+                } catch (Exception ignored) {
+
                 }
             }
         }
