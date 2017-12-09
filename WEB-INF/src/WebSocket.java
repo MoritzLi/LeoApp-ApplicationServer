@@ -1,6 +1,8 @@
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 @ServerEndpoint("/")
 public class WebSocket {
@@ -29,15 +31,13 @@ public class WebSocket {
         if (message.startsWith("uid")) {
             client.setUid(Integer.parseInt(message.substring(message.indexOf('=') + 1)));
             return "+OK";
-        }
-        if (message.startsWith("mdate")) {
+        } else if (message.startsWith("mdate")) {
             client.setMdate(message.substring(message.indexOf('=') + 1));
             return "+OK";
-        }
-        if (message.startsWith("request") && client.getMdate() != null && client.getUid() != 0) {
+        } else if (message.startsWith("request") && client.getMdate() != null && client.getUid() != 0) {
             try {
                 Class.forName("com.mysql.jdbc.Driver").newInstance();
-                client.setConnection(DriverManager.getConnection("jdbc:mysql://localhost:3306/leoapp", "leo", "!LeO!2013"));
+                client.setConnection(DriverManager.getConnection("jdbc:mysql://ucloud.sql.regioit.intern:3306/leoapp", "leo", "!LeO!2013"));
 
                 new ReceiveThread().start();
 
@@ -45,8 +45,54 @@ public class WebSocket {
             } catch (IllegalAccessException | InstantiationException | SQLException | ClassNotFoundException e) {
                 return '-' + e.getMessage();
             }
+        } else if (message.startsWith("c+") && client.getUid() != 0) {
+            String ctype = message.charAt(message.indexOf('\'') + 1) == 'G' ? "'group'" : "'private'";
+            String cname = '\'' + message.substring(message.indexOf(';') + 1) + '\'';
+            String ccreate = '\'' + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + '\'';
+            String query = "INSERT INTO chats VALUES(null, " + cname + ", " + ctype + ", " + ccreate + ")";
+            System.out.println(query);
+            try {
+                Connection connection = client.getConnection();
+                Statement statement = connection.createStatement();
+                boolean b = statement.execute(query);
+                statement.close();
+                System.out.println(b);
+                return b ? "+OK" : "-" + statement.getWarnings().getMessage();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (message.startsWith("a+") && client.getUid() != 0) {
+            String cid = message.substring(message.indexOf(' ') + 1, message.indexOf(';'));
+            String uid = message.substring(message.indexOf(';') + 1);
+            String query = "INSERT INTO assoziation VALUES(" + cid + ", " + uid + ")";
+            try {
+                Connection connection = client.getConnection();
+                Statement statement = connection.createStatement();
+                boolean b = statement.execute(query);
+                statement.close();
+                System.out.println(b);
+                return b ? "+OK" : "-" + statement.getWarnings().getMessage();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (message.startsWith("m+") && client.getUid() != 0) {
+            //TODO Encryption
+            String cid = message.substring(message.indexOf(' ') + 1, message.indexOf(';'));
+            String mtext = message.substring(message.indexOf(';'));
+            String mdate = '\'' + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + '\'';
+            String query = "INSERT INTO messages VALUES (null, " + client.getUid() + ", " + mtext + ", " + cid + ", " + mdate + ")";
+            try {
+                Connection connection = client.getConnection();
+                Statement statement = connection.createStatement();
+                boolean b = statement.execute(query);
+                statement.close();
+                System.out.println(b);
+                return b ? "+OK" : "-" + statement.getWarnings().getMessage();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-        return "not part of the protocol";
+        return "-not part of the protocol";
     }
 
     @OnError
