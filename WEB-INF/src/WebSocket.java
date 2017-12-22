@@ -21,6 +21,7 @@ public class WebSocket {
     public void onOpen(Session session) {
         client = new ClientData(session);
         System.out.println("new connection: " + session.toString());
+        System.out.println(session.getMaxTextMessageBufferSize());
     }
 
     @OnClose
@@ -162,6 +163,7 @@ public class WebSocket {
 
         return "-not part of the protocol";
     }
+
     private class ReceiveThread extends Thread {
         @Override
         public void run() {
@@ -198,8 +200,7 @@ public class WebSocket {
                                                 resultSet.getString(3) +
                                                 "_ ; _" +
                                                 resultSet.getString(4) +
-                                                "_ next _" +
-                                                "\n"
+                                                "_ next _"
                                 );
                             }
 
@@ -239,8 +240,7 @@ public class WebSocket {
                                                 resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _") +
                                                 "_ ; _" +
                                                 resultSet.getString(3) +
-                                                "_ next _" +
-                                                "\n";
+                                                "_ next _";
 
                                         if (!client.getSent().contains(s)) {
                                             client.getSession().getAsyncRemote().sendText(s);
@@ -296,8 +296,7 @@ public class WebSocket {
                                                 resultSet.getString(4) +
                                                 "_ ; _" +
                                                 resultSet.getString(5) +
-                                                "_ next _" +
-                                                "\n";
+                                                "_ next _";
 
                                         if (!client.getSent().contains(s)) {
                                             client.getSession().getAsyncRemote().sendText(s);
@@ -333,25 +332,22 @@ public class WebSocket {
 
                         if (resultSetCount.first() && client.getAcount() != resultSetCount.getInt(1)) {
 
-                            client.getSession().getAsyncRemote().sendText("a\n");
-
                             Statement statementAssoziation = client.getConnection().createStatement();
                             String    sqlAssoziation       = "SELECT a2.cid, a2.uid FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + client.getUid();
 
                             if (statementAssoziation.execute(sqlAssoziation)) {
 
-                                ResultSet resultSet = statementAssoziation.getResultSet();
+                                ResultSet     resultSet = statementAssoziation.getResultSet();
+                                StringBuilder builder   = new StringBuilder("a");
 
                                 if (resultSet.first()) {
 
                                     for (; !resultSet.isAfterLast(); resultSet.next()) {
 
-                                        client.getSession().getAsyncRemote().sendText(
-                                                resultSet.getString(1) +
-                                                        "," +
-                                                        resultSet.getString(2) +
-                                                        ";"
-                                        );
+                                        builder.append(resultSet.getString(1))
+                                                .append(",")
+                                                .append(resultSet.getString(2))
+                                                .append(";");
 
                                     }
 
@@ -359,11 +355,11 @@ public class WebSocket {
 
                                 resultSet.close();
 
+                                client.getSession().getAsyncRemote().sendText(builder.append("_ next _").toString());
+
                             }
 
                             statementAssoziation.close();
-
-                            client.getSession().getAsyncRemote().sendText("_ next _\n");
 
                             client.setAcount(resultSetCount.getInt(1));
 
