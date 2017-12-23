@@ -1,12 +1,15 @@
-import javax.websocket.Session;
 import java.sql.Connection;
+
+import javax.websocket.Session;
 
 class ClientData {
     private final Session session;
     private final List<String> sent;
+
     private int uid;
     private String mdate;
     private Connection connection;
+
     private int ccount = 0;
     private int ucount = 0;
     private int acount = 0;

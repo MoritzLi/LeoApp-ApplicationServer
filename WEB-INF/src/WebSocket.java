@@ -67,7 +67,9 @@ public class WebSocket {
 
             return "+OK";
 
-        } else if (message.startsWith("mdate")) {
+        }
+
+        if (message.startsWith("mdate")) {
 
             client.setMdate(
                     message.substring(message.indexOf('=') + 1)
@@ -75,13 +77,15 @@ public class WebSocket {
 
             return "+OK";
 
-        } else if (message.startsWith("request") && client.getMdate() != null && client.getUid() != 0) {
+        }
+
+        if (message.startsWith("request") && client.getMdate() != null && client.getUid() != 0) {
             try {
 
                 Class.forName("com.mysql.jdbc.Driver").newInstance();
                 client.setConnection(
                         DriverManager.getConnection(
-                                "jdbc:mysql://localhost:3306/leoapp"/*"jdbc:mysql://ucloud.sql.regioit.intern:3306/leoapp" TODO*/,
+                                "jdbc:mysql://ucloud.sql.regioit.intern:3306/leoapp",
                                 "leo",
                                 "!LeO!2013"
                         )
@@ -96,13 +100,14 @@ public class WebSocket {
                 return "-ERR " + getStacktrace(e);
 
             }
-        } else if (message.startsWith("c+") && client.getUid() != 0) {
+        }
+
+        if (message.startsWith("c+") && client.getUid() != 0) {
 
             String ctype   = message.charAt(message.indexOf('\'') + 1) == 'G' ? "'group'" : "'private'";
             String cname   = '\'' + message.substring(message.indexOf(';') + 1) + '\'';
             String ccreate = '\'' + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + '\'';
             String query   = "INSERT INTO chats VALUES(null, " + cname + ", " + ctype + ", " + ccreate + ")";
-            System.out.println(query);
 
             try {
 
@@ -110,7 +115,6 @@ public class WebSocket {
                 Statement  statement  = connection.createStatement();
                 boolean    b          = statement.execute(query);
                 statement.close();
-                System.out.println(b);
 
                 return b ? "+OK" : "-ERR " + statement.getWarnings().getMessage();
 
@@ -118,7 +122,9 @@ public class WebSocket {
                 e.printStackTrace();
                 return "-ERR";
             }
-        } else if (message.startsWith("a+") && client.getUid() != 0) {
+        }
+
+        if (message.startsWith("a+") && client.getUid() != 0) {
 
             String cid   = message.substring(message.indexOf(' ') + 1, message.indexOf(';'));
             String uid   = message.substring(message.indexOf(';') + 1);
@@ -130,7 +136,6 @@ public class WebSocket {
                 Statement  statement  = connection.createStatement();
                 boolean    b          = statement.execute(query);
                 statement.close();
-                System.out.println(b);
 
                 return b ? "+OK" : "-ERR " + statement.getWarnings().getMessage();
 
@@ -138,7 +143,9 @@ public class WebSocket {
                 e.printStackTrace();
                 return "-ERR";
             }
-        } else if (message.startsWith("m+") && client.getUid() != 0) {
+        }
+
+        if (message.startsWith("m+") && client.getUid() != 0) {
             //TODO Encryption
             String cid   = message.substring(message.indexOf(' ') + 1, message.indexOf(';'));
             String mtext = message.substring(message.indexOf(';'));
@@ -151,7 +158,6 @@ public class WebSocket {
                 Statement  statement  = connection.createStatement();
                 boolean    b          = statement.execute(query);
                 statement.close();
-                System.out.println(b);
 
                 return b ? "+OK" : "-ERR " + statement.getWarnings().getMessage();
 
@@ -161,7 +167,7 @@ public class WebSocket {
             }
         }
 
-        return "-not part of the protocol";
+        return "-ERR not part of the protocol";
     }
 
     private class ReceiveThread extends Thread {
@@ -181,13 +187,12 @@ public class WebSocket {
 
                             for (; !resultSet.isAfterLast(); resultSet.next()) {
                                 String text = resultSet.getString(2)
-                                        .replace("_ ; _", "_  ;  _")
-                                        .replace("_ next _", "_  next  _");
+                                        .replace("_ ; _", "_  ;  _");
                                 String key = Encryption.createKey(text);
                                 text = Encryption.encrypt(text, key);
                                 key = Encryption.encryptKey(key);
 
-                                client.getSession().getAsyncRemote().sendText(
+                                client.getSession().getBasicRemote().sendText(
                                         "m" +
                                                 resultSet.getString(1) +
                                                 "_ ; _" +
@@ -199,8 +204,7 @@ public class WebSocket {
                                                 "_ ; _" +
                                                 resultSet.getString(3) +
                                                 "_ ; _" +
-                                                resultSet.getString(4) +
-                                                "_ next _"
+                                                resultSet.getString(4)
                                 );
                             }
 
@@ -221,7 +225,9 @@ public class WebSocket {
 
                         ResultSet resultSetCount = statementChatsCount.getResultSet();
 
-                        if (resultSetCount.first() && client.getCcount() != resultSetCount.getInt(1)) {
+                        if (!resultSetCount.first()) {
+                            client.getSession().getBasicRemote().sendText("-ERR " + statementChatsCount.getWarnings());
+                        } else if (client.getCcount() != resultSetCount.getInt(1)) {
 
                             Statement statementChats = client.getConnection().createStatement();
                             String    sqlChats       = "SELECT c.cid, c.cname, c.ctype FROM Chats c INNER JOIN Assoziation a ON c.cid = a.cid AND a.uid = " + client.getUid();
@@ -239,11 +245,10 @@ public class WebSocket {
                                                 "_ ; _" +
                                                 resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _") +
                                                 "_ ; _" +
-                                                resultSet.getString(3) +
-                                                "_ next _";
+                                                resultSet.getString(3);
 
                                         if (!client.getSent().contains(s)) {
-                                            client.getSession().getAsyncRemote().sendText(s);
+                                            client.getSession().getBasicRemote().sendText(s);
                                             client.getSent().append(s);
                                         }
 
@@ -274,7 +279,9 @@ public class WebSocket {
 
                         ResultSet resultSetCount = statementUserCount.getResultSet();
 
-                        if (resultSetCount.first() && client.getUcount() != resultSetCount.getInt(1)) {
+                        if (!resultSetCount.first()) {
+                            client.getSession().getBasicRemote().sendText("-ERR " + statementUserCount.getWarnings());
+                        } else if (client.getUcount() != resultSetCount.getInt(1)) {
 
                             Statement statementUser = client.getConnection().createStatement();
                             String    sqlUser       = "SELECT uid, uname, uklasse, upermission, udefaultname FROM Users";
@@ -295,11 +302,10 @@ public class WebSocket {
                                                 "_ ; _" +
                                                 resultSet.getString(4) +
                                                 "_ ; _" +
-                                                resultSet.getString(5) +
-                                                "_ next _";
+                                                resultSet.getString(5);
 
                                         if (!client.getSent().contains(s)) {
-                                            client.getSession().getAsyncRemote().sendText(s);
+                                            client.getSession().getBasicRemote().sendText(s);
                                             client.getSent().append(s);
                                         }
 
@@ -330,7 +336,9 @@ public class WebSocket {
 
                         ResultSet resultSetCount = statementAssoziationCount.getResultSet();
 
-                        if (resultSetCount.first() && client.getAcount() != resultSetCount.getInt(1)) {
+                        if (!resultSetCount.first()) {
+                            client.getSession().getBasicRemote().sendText("-ERR " + statementAssoziationCount.getWarnings());
+                        } else if (client.getAcount() != resultSetCount.getInt(1)) {
 
                             Statement statementAssoziation = client.getConnection().createStatement();
                             String    sqlAssoziation       = "SELECT a2.cid, a2.uid FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + client.getUid();
@@ -355,7 +363,7 @@ public class WebSocket {
 
                                 resultSet.close();
 
-                                client.getSession().getAsyncRemote().sendText(builder.append("_ next _").toString());
+                                client.getSession().getBasicRemote().sendText(builder.toString());
 
                             }
 
