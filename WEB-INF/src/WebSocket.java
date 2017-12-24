@@ -21,7 +21,6 @@ public class WebSocket {
     public void onOpen(Session session) {
         client = new ClientData(session);
         System.out.println("new connection: " + session.toString());
-        System.out.println(session.getMaxTextMessageBufferSize());
     }
 
     @OnClose
@@ -185,6 +184,8 @@ public class WebSocket {
 
                         if (resultSet.first()) {
 
+                            client.setMdate(resultSet.getString(5));
+
                             for (; !resultSet.isAfterLast(); resultSet.next()) {
                                 String text = resultSet.getString(2)
                                         .replace("_ ; _", "_  ;  _");
@@ -207,8 +208,6 @@ public class WebSocket {
                                                 resultSet.getString(4)
                                 );
                             }
-
-                            client.setMdate(resultSet.getString(5));
 
                         }
 
@@ -243,7 +242,7 @@ public class WebSocket {
                                         String s = "c" +
                                                 resultSet.getString(1) +
                                                 "_ ; _" +
-                                                resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _") +
+                                                resultSet.getString(2).replace("_ ; _", "_  ;  _") +
                                                 "_ ; _" +
                                                 resultSet.getString(3);
 
@@ -296,7 +295,7 @@ public class WebSocket {
                                         String s = "u" +
                                                 resultSet.getString(1) +
                                                 "_ ; _" +
-                                                resultSet.getString(2).replace("_ ; _", "_  ;  _").replace("_ next _", "_  next  _") +
+                                                resultSet.getString(2).replace("_ ; _", "_  ;  _") +
                                                 "_ ; _" +
                                                 resultSet.getString(3) +
                                                 "_ ; _" +
