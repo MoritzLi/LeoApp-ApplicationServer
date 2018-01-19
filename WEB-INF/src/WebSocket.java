@@ -1,7 +1,7 @@
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -79,26 +79,28 @@ public class WebSocket {
         }
 
         if (message.startsWith("request") && client.getMdate() != null && client.getUid() != 0) {
-            try {
+//            try {
+//
+//                Class.forName("com.mysql.jdbc.Driver").newInstance();
+//                client.setConnection(
+//                        DriverManager.getConnection(
+//                                "jdbc:mysql://ucloud.sql.regioit.intern:3306/leoapp",
+//                                "leo",
+//                                "!LeO!2013"
+//                        )
+//                );
+//
+//                new ReceiveThread().start();
+//
+//                return "+OK";
+//
+//            } catch (IllegalAccessException | InstantiationException | SQLException | ClassNotFoundException e) {
+//
+//                return "-ERR " + getStacktrace(e);
+//
+//            }
 
-                Class.forName("com.mysql.jdbc.Driver").newInstance();
-                client.setConnection(
-                        DriverManager.getConnection(
-                                "jdbc:mysql://ucloud.sql.regioit.intern:3306/leoapp",
-                                "leo",
-                                "!LeO!2013"
-                        )
-                );
-
-                new ReceiveThread().start();
-
-                return "+OK";
-
-            } catch (IllegalAccessException | InstantiationException | SQLException | ClassNotFoundException e) {
-
-                return "-ERR " + getStacktrace(e);
-
-            }
+            return "+OK";
         }
 
         if (message.startsWith("c+") && client.getUid() != 0) {
@@ -106,20 +108,42 @@ public class WebSocket {
             String ctype   = message.charAt(message.indexOf('\'') + 1) == 'G' ? "'group'" : "'private'";
             String cname   = '\'' + message.substring(message.indexOf(';') + 1) + '\'';
             String ccreate = '\'' + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + '\'';
-            String query   = "INSERT INTO chats VALUES(null, " + cname + ", " + ctype + ", " + ccreate + ")";
+            String query   = "INSERT INTO Chats VALUES(null, " + cname + ", " + ctype + ", " + ccreate + ")";
 
             try {
 
                 Connection connection = client.getConnection();
                 Statement  statement  = connection.createStatement();
-                boolean    b          = statement.execute(query);
+
+                statement.execute(query);
+
+                SQLWarning warning = statement.getWarnings();
+                String     warnings;
+                if (warning != null)
+                    warnings = getStacktrace(warning);
+                else
+                    warnings = null;
+
+                statement.execute("SELECT cid FROM Chats WHERE ccreate = " + ccreate);
+                ResultSet set = statement.getResultSet();
+                set.first();
+                String cid = set.getString(1);
+                set.close();
+
+                query = "INSERT INTO Assoziation VALUES(" + cid + ", " + client.getUid() + ")";
+                statement.execute(query);
+
+                if (ctype.equals("'private'")) {
+                    query = "INSERT INTO Assoziation VALUES(" + cid + ", " + cname.substring(0, cname.indexOf(' ')) + ")";
+                    statement.execute(query);
+                }
+
                 statement.close();
 
-                return b ? "+OK" : "-ERR " + statement.getWarnings().getMessage();
+                return warnings == null ? "+OK id" + cid : "-ERR " + warnings;
 
             } catch (Exception e) {
-                e.printStackTrace();
-                return "-ERR";
+                return "-ERR " + getStacktrace(e);
             }
         }
 
@@ -127,43 +151,95 @@ public class WebSocket {
 
             String cid   = message.substring(message.indexOf(' ') + 1, message.indexOf(';'));
             String uid   = message.substring(message.indexOf(';') + 1);
-            String query = "INSERT INTO assoziation VALUES(" + cid + ", " + uid + ")";
+            String query = "INSERT INTO Assoziation VALUES(" + cid + ", " + uid + ")";
 
             try {
 
                 Connection connection = client.getConnection();
                 Statement  statement  = connection.createStatement();
-                boolean    b          = statement.execute(query);
+
+                statement.execute(query);
+
+                SQLWarning warning = statement.getWarnings();
+                String     warnings;
+                if (warning != null)
+                    warnings = getStacktrace(warning);
+                else
+                    warnings = null;
                 statement.close();
 
-                return b ? "+OK" : "-ERR " + statement.getWarnings().getMessage();
+                return warnings == null ? "+OK" : "-ERR " + warnings;
 
             } catch (Exception e) {
-                e.printStackTrace();
-                return "-ERR";
+                return "-ERR " + getStacktrace(e);
+            }
+        }
+
+        if (message.startsWith("a-") && client.getUid() != 0) {
+
+            String cid   = message.substring(message.indexOf(' ') + 1, message.indexOf(';'));
+            String uid   = message.substring(message.indexOf(';') + 1);
+            String query = "DELETE FROM Assoziation WHERE cid = " + cid + " AND uid = " + uid;
+
+            try {
+
+                Connection connection = client.getConnection();
+                Statement  statement  = connection.createStatement();
+
+                statement.execute(query);
+
+                SQLWarning warning = statement.getWarnings();
+                String     warnings;
+                if (warning != null)
+                    warnings = getStacktrace(warning);
+                else
+                    warnings = null;
+                statement.close();
+
+                return warnings == null ? "+OK" : "-ERR " + warnings;
+
+            } catch (Exception e) {
+                return "-ERR " + getStacktrace(e);
             }
         }
 
         if (message.startsWith("m+") && client.getUid() != 0) {
-            //TODO Encryption
-            String cid   = message.substring(message.indexOf(' ') + 1, message.indexOf(';'));
-            String mtext = message.substring(message.indexOf(';'));
+
+            int i  = message.indexOf(';');
+            int i2 = message.indexOf(';', i + 1);
+            for (char c : message.substring(i2 + 1).toCharArray()) {
+                System.out.println(c);
+                System.out.println((int) c);
+            }
+            System.out.println(message.substring(i2 + 1));
+
+            String cid   = message.substring(message.indexOf(' ') + 1, i);
+            String mkey  = Encryption.decryptKey(message.substring(i + 1, i2));
+            String mtext = '\'' + Encryption.decrypt(message.substring(i2 + 1), mkey) + '\'';
             String mdate = '\'' + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()) + '\'';
-            String query = "INSERT INTO messages VALUES (null, " + client.getUid() + ", " + mtext + ", " + cid + ", " + mdate + ")";
+            String query = "INSERT INTO Messages VALUES (null, " + client.getUid() + ", " + mtext + ", " + cid + ", " + mdate + ")";
 
             try {
 
                 Connection connection = client.getConnection();
                 Statement  statement  = connection.createStatement();
-                boolean    b          = statement.execute(query);
+
+                statement.execute(query);
+
+                SQLWarning warning = statement.getWarnings();
+                String     warnings;
+                if (warning != null)
+                    warnings = getStacktrace(warning);
+                else
+                    warnings = null;
                 statement.close();
 
-                return b ? "+OK" : "-ERR " + statement.getWarnings().getMessage();
+                return warnings == null ? "+OK" : "-ERR " + warnings;
 
             } catch (Exception e) {
-                e.printStackTrace();
-                return "-ERR";
+                return "-ERR " + getStacktrace(e);
             }
+
         }
 
         return "-ERR not part of the protocol";
@@ -210,123 +286,76 @@ public class WebSocket {
                             }
 
                         }
+                        resultSet.close();
+
+                    }
+                    statementMessages.close();
+
+                    Statement statementChats = client.getConnection().createStatement();
+                    String    sqlChats       = "SELECT c.cid, c.cname, c.ctype FROM Chats c INNER JOIN Assoziation a ON c.cid = a.cid AND a.uid = " + client.getUid();
+
+                    if (statementChats.execute(sqlChats)) {
+
+                        ResultSet resultSet = statementChats.getResultSet();
+
+                        if (resultSet.first()) {
+
+                            for (; !resultSet.isAfterLast(); resultSet.next()) {
+
+                                String s = "c" +
+                                        resultSet.getString(1) +
+                                        "_ ; _" +
+                                        resultSet.getString(2).replace("_ ; _", "_  ;  _") +
+                                        "_ ; _" +
+                                        resultSet.getString(3);
+
+                                if (!client.getSent().contains(s)) {
+                                    client.getSession().getBasicRemote().sendText(s);
+                                    client.getSent().append(s);
+                                }
+
+                            }
+
+                        }
+                        resultSet.close();
+
+                    }
+                    statementChats.close();
+
+                    Statement statementUser = client.getConnection().createStatement();
+                    String    sqlUser       = "SELECT uid, uname, uklasse, upermission, udefaultname FROM Users";
+
+                    if (statementUser.execute(sqlUser)) {
+
+                        ResultSet resultSet = statementUser.getResultSet();
+
+                        if (resultSet.first()) {
+
+                            for (; !resultSet.isAfterLast(); resultSet.next()) {
+                                String s = "u" +
+                                        resultSet.getString(1) +
+                                        "_ ; _" +
+                                        resultSet.getString(2).replace("_ ; _", "_  ;  _") +
+                                        "_ ; _" +
+                                        resultSet.getString(3) +
+                                        "_ ; _" +
+                                        resultSet.getString(4) +
+                                        "_ ; _" +
+                                        resultSet.getString(5);
+
+                                if (!client.getSent().contains(s)) {
+                                    client.getSession().getBasicRemote().sendText(s);
+                                    client.getSent().append(s);
+                                }
+
+                            }
+
+                        }
 
                         resultSet.close();
 
                     }
-
-                    statementMessages.close();
-
-                    Statement statementChatsCount = client.getConnection().createStatement();
-                    String    sqlChatsCount       = "SELECT COUNT(*) FROM Chats c INNER JOIN Assoziation a ON c.cid = a.cid AND a.uid = " + client.getUid();
-
-                    if (statementChatsCount.execute(sqlChatsCount)) {
-
-                        ResultSet resultSetCount = statementChatsCount.getResultSet();
-
-                        if (!resultSetCount.first()) {
-                            client.getSession().getBasicRemote().sendText("-ERR " + statementChatsCount.getWarnings());
-                        } else if (client.getCcount() != resultSetCount.getInt(1)) {
-
-                            Statement statementChats = client.getConnection().createStatement();
-                            String    sqlChats       = "SELECT c.cid, c.cname, c.ctype FROM Chats c INNER JOIN Assoziation a ON c.cid = a.cid AND a.uid = " + client.getUid();
-
-                            if (statementChats.execute(sqlChats)) {
-
-                                ResultSet resultSet = statementChats.getResultSet();
-
-                                if (resultSet.first()) {
-
-                                    for (; !resultSet.isAfterLast(); resultSet.next()) {
-
-                                        String s = "c" +
-                                                resultSet.getString(1) +
-                                                "_ ; _" +
-                                                resultSet.getString(2).replace("_ ; _", "_  ;  _") +
-                                                "_ ; _" +
-                                                resultSet.getString(3);
-
-                                        if (!client.getSent().contains(s)) {
-                                            client.getSession().getBasicRemote().sendText(s);
-                                            client.getSent().append(s);
-                                        }
-
-                                    }
-
-                                }
-
-                                resultSet.close();
-
-                            }
-
-                            statementChats.close();
-
-                            client.setCcount(resultSetCount.getInt(1));
-
-                        }
-
-                        resultSetCount.close();
-
-                    }
-
-                    statementChatsCount.close();
-
-                    Statement statementUserCount = client.getConnection().createStatement();
-                    String    sqlUserCount       = "SELECT COUNT(*) FROM Users";
-
-                    if (statementUserCount.execute(sqlUserCount)) {
-
-                        ResultSet resultSetCount = statementUserCount.getResultSet();
-
-                        if (!resultSetCount.first()) {
-                            client.getSession().getBasicRemote().sendText("-ERR " + statementUserCount.getWarnings());
-                        } else if (client.getUcount() != resultSetCount.getInt(1)) {
-
-                            Statement statementUser = client.getConnection().createStatement();
-                            String    sqlUser       = "SELECT uid, uname, uklasse, upermission, udefaultname FROM Users";
-
-                            if (statementUser.execute(sqlUser)) {
-
-                                ResultSet resultSet = statementUser.getResultSet();
-
-                                if (resultSet.first()) {
-
-                                    for (; !resultSet.isAfterLast(); resultSet.next()) {
-                                        String s = "u" +
-                                                resultSet.getString(1) +
-                                                "_ ; _" +
-                                                resultSet.getString(2).replace("_ ; _", "_  ;  _") +
-                                                "_ ; _" +
-                                                resultSet.getString(3) +
-                                                "_ ; _" +
-                                                resultSet.getString(4) +
-                                                "_ ; _" +
-                                                resultSet.getString(5);
-
-                                        if (!client.getSent().contains(s)) {
-                                            client.getSession().getBasicRemote().sendText(s);
-                                            client.getSent().append(s);
-                                        }
-
-                                    }
-
-                                }
-
-                                resultSet.close();
-
-                            }
-
-                            statementUser.close();
-
-                            client.setUcount(resultSetCount.getInt(1));
-
-                        }
-
-                        resultSetCount.close();
-
-                    }
-
-                    statementUserCount.close();
+                    statementUser.close();
 
                     Statement statementAssoziationCount = client.getConnection().createStatement();
                     String    sqlAssoziationCount       = "SELECT COUNT(*) FROM Assoziation a1 INNER JOIN Assoziation a2 ON a1.cid = a2.cid WHERE a1.uid = " + client.getUid();
@@ -359,23 +388,19 @@ public class WebSocket {
                                     }
 
                                 }
-
                                 resultSet.close();
 
                                 client.getSession().getBasicRemote().sendText(builder.toString());
 
                             }
-
                             statementAssoziation.close();
 
                             client.setAcount(resultSetCount.getInt(1));
 
                         }
-
                         resultSetCount.close();
 
                     }
-
                     statementAssoziationCount.close();
 
                 }
